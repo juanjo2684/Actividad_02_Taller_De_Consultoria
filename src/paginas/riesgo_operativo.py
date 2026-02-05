@@ -47,7 +47,7 @@ def construir_fig_riesgo_operativo(df_filtrado: pd.DataFrame):
         return fig
 
     df["Ultima_Revision"] = pd.to_datetime(df["Ultima_Revision"], errors="coerce")
-    fecha_referencia = pd.to_datetime(datetime.now().date())
+    fecha_referencia = df["Ultima_Revision"].max()
     df["dias_sin_revision"] = (fecha_referencia - df["Ultima_Revision"]).dt.days
 
     df = df.dropna(subset=["dias_sin_revision"])
@@ -188,3 +188,4 @@ def mostrar_riesgo_operativo(df_filtrado: pd.DataFrame, renderizar: bool = True)
                 "de tickets de soporte representan un riesgo operativo crítico."
             )
     return fig_riesgo
+
