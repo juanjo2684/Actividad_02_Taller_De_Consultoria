@@ -10,42 +10,169 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
         return pd.DataFrame(), {"error": str(e)}
 
     df_trans = df_raw.copy()
-    
+
     # 1. Limpieza de nombres de columnas
     df_trans.columns = [c.strip() for c in df_trans.columns]
-    
-    # ---------------------------------------------------------
-    # 2. ESTANDARIZACIÓN DIRECTA
+
+    # ==========================================
+    # PASO 2: CONVERSIÓN DE TIPOS DE DATO
+    # ==========================================
+    # Convertir Fecha_Venta a datetime para análisis temporal
+    df_trans['Fecha_Venta'] = pd.to_datetime(df_trans['Fecha_Venta'])
+
+    # ==========================================
+    # PASO 3: NORMALIZACIÓN DE TEXTO
+    # ==========================================
+    # Convertir todas las columnas de texto a minúsculas
+    # Esto facilita comparaciones y evita inconsistencias
+    cols_texto = df_trans.select_dtypes(include=['object', 'string']).columns
+    df_trans[cols_texto] = df_trans[cols_texto].apply(lambda x: x.str.lower())
+
+    # ==========================================
+    # PASO 4: CONVERSIÓN DE CANTIDAD_VENDIDA A POSITIVO
+    # ==========================================
+    # Valores negativos son errores de entrada, se convierten a positivos
+    df_trans.loc[:, 'Cantidad_Vendida'] = df_trans.loc[:, 'Cantidad_Vendida'].abs()
+
+    # ==========================================
+    # PASO 5: IMPUTACIÓN CONDICIONAL DE ESTADO_ENVIO
+    # ==========================================
+    # Estrategia: Usar información de feedback para inferir estado de envío
+
+    # Paso 5a: Transacciones SIN ticket de soporte -> "entregado"
+    # (clientes sin problemas, no abrieron ticket)
+    transacciones_nps_no = df_feedback[df_feedback['Ticket_Soporte_Abierto'] == 'no']['Transaccion_ID'].unique()
+
+    condicion_existe = df_trans['Transaccion_ID'].isin(transacciones_nps_no)
+    condicion_vacio = df_trans['Estado_Envio'].isna()
+
+    df_trans.loc[condicion_existe & condicion_vacio, 'Estado_Envio'] = 'entregado'
+
+    # Paso 5b: Transacciones CON ticket de soporte abierto -> "devuelto"
+    # (clientes con problemas, abrieron ticket)
+    transacciones_nps_si = df_feedback[df_feedback['Ticket_Soporte_Abierto'] == 'si']['Transaccion_ID'].unique()
+
+    condicion_existe = df_trans['Transaccion_ID'].isin(transacciones_nps_si)
+    condicion_vacio = df_trans['Estado_Envio'].isna()
+
+    df_trans.loc[condicion_existe & condicion_vacio, 'Estado_Envio'] = 'devuelto'
+
+    # ==========================================
+    # PASO 6: NORMALIZACIÓN DE CIUDADES DESTINO
+    # ==========================================
+    # Mapeo de abreviaturas a nombres completos
+    dic_ciudades = {
+        "bog": "bogotá", "bogota": "bogotá",
+        "med": "medellín", "medellin": "medellín",
+        "baq": "barranquilla", "barranquilla": "barranquilla",
+        "ventas_web": "canal digital" 
+    }
+    df_trans['Ciudad_Destino'].replace(dic_ciudades, inplace=True)
+
+    # ==========================================
+    # PASO 7: IMPUTACIÓN SELECTIVA DE COSTO_ENVIO
+    # ==========================================
+    # Lógica de negocio: No hay envío en transacciones de canal físico (tienda)
+    df_trans.loc[
+        df_trans['Canal_Venta'] == 'físico', 
+        'Costo_Envio'
+    ] = 0
+
+    # ==========================================
+    # PASO 8: FEATURE ENGINEERING - MÁRGENES
+    # ==========================================
+    # Crear métricas de rentabilidad
+
+    # Margen absoluto: Precio_Venta_Final - Costo_Envio
+    df_trans['margen'] = (
+        df_trans['Precio_Venta_Final'] - df_trans['Costo_Envio']
+    )
+
+    # Margen porcentual: (Margen / Precio_Venta_Final) * 100
+    df_trans['margen %'] = (
+        df_trans['margen'] / df_trans['Precio_Venta_Final']
+    )
+
+    # ==========================================
+    # PASO 9: ENRIQUECIMIENTO - MERGE CON INVENTARIO
+    # ==========================================
+    # Traer información de bodega del inventario
+    # Left join: Mantener todas las transacciones, agregar bodega si existe
+    df_trans = df_trans.merge(
+        df_inventario[['SKU_ID', 'Bodega_Origen']],  # Solo columnas necesarias
+        on='SKU_ID',                                   # Llave de unión
+        how='left'                                     # Left join
+    )
+
+    # ==========================================
+    # PASO 10: CREACIÓN DE IDENTIFICADOR GRUPAL
+    # ==========================================
+    # Crear ID único para cada ruta bodega-ciudad
+    # Útil para imputación de tiempos y costos por ruta
+    df_trans['id_tiempos_entrega'] = (
+        df_trans['Bodega_Origen'] + "-" + df_trans['Ciudad_Destino']
+    )
+
+    # ==========================================
+    # PASO 11: IMPUTACIÓN GRUPAL - TIEMPO_ENTREGA_REAL
+    # ==========================================
+    # Llenar nulos con la mediana del grupo bodega-ciudad
+    # Esto mantiene consistencia de tiempos por ruta
+
+    df_trans.loc[df_trans['Tiempo_Entrega_Real'] == 999, 'Tiempo_Entrega_Real'] = np.nan
+    df_trans['Tiempo_Entrega_Real'] = df_trans['Tiempo_Entrega_Real'].fillna(
+        df_trans.groupby('id_tiempos_entrega')['Tiempo_Entrega_Real'].transform('median').fillna(0)
+    )
+
+    # ==========================================
+    # PASO 12: IMPUTACIÓN GRUPAL - COSTO_ENVIO
+    # ==========================================
+    # Llenar nulos con la mediana del grupo bodega-ciudad
+    # Mantiene costos realistas por ruta
+    df_trans['Costo_Envio'] = df_trans['Costo_Envio'].fillna(
+        df_trans.groupby('id_tiempos_entrega')['Costo_Envio'].transform('median')
+    )
+
+
+    # ==========================================
+    # PASO 13: CÁLCULO DE FECHA CALCULADA
+    # ==========================================
+    # Calcular fecha esperada de entrega
+    # Formula: Fecha_Venta + Tiempo_Entrega_Real (en días)
+    fecha_max = df_trans.Fecha_Venta.max()
+
+    df_trans['Fecha_Calculada'] = df_trans.apply(
+        lambda x: x['Fecha_Venta'] + pd.DateOffset(days=int(x['Tiempo_Entrega_Real'])), 
+        axis=1
+    )
+
+    # ==========================================
+    # PASO 14: IMPUTACIÓN LÓGICA - ESTADO_ENVIO
+    # ==========================================
+    # Paso 14a: Marcar como "entregado" (entregado)
+    # Si la fecha calculada es menor a la fecha máxima del dataset
+    # Significa que debería haber llegado ya
+    df_trans.loc[
+        (df_trans['Fecha_Calculada'] < fecha_max) & (df_trans['Estado_Envio'].isna()),
+        'Estado_Envio'
+    ] = 'entregado'
+
+    # Paso 14b: Marcar como "en camino"
+    # Si la fecha calculada es mayor a la fecha máxima
+    # Significa que aún está en tránsito (no debería haber llegado)
+    df_trans.loc[
+        (df_trans['Fecha_Calculada'] >= fecha_max) & (df_trans['Estado_Envio'].isna()),
+        'Estado_Envio'
+    ] = 'en camino'
+
+    # ==========================================
+    # 15. ESTANDARIZACIÓN DIRECTA
     # ---------------------------------------------------------
 
     if 'Tiempo_Entrega_Real' in df_trans.columns:
         df_trans = df_trans.rename(columns={'Tiempo_Entrega_Real': 'Tiempo_Entrega'})
     elif 'Tiempo_Entrega' not in df_trans.columns:
         df_trans['Tiempo_Entrega'] = np.nan
-
-    # ---------------------------------------------------------
-    # 3. NORMALIZACIÓN DE CIUDADES
-    # ---------------------------------------------------------
-    if 'Ciudad_Destino' in df_trans.columns:
-        df_trans['Ciudad_Destino'] = df_trans['Ciudad_Destino'].astype(str).str.upper().str.strip()
-        
-        mapeo_ciudades = {
-            "BOG": "BOGOTÁ", "BOGOTA": "BOGOTÁ",
-            "MED": "MEDELLÍN", "MEDELLIN": "MEDELLÍN",
-            "BAQ": "BARRANQUILLA", "BARRANQUILLA": "BARRANQUILLA",
-            "VENTAS_WEB": "CANAL DIGITAL"
-        }
-        df_trans['Ciudad_Destino'] = df_trans['Ciudad_Destino'].replace(mapeo_ciudades)
-
-    # 4. Limpieza de Tipos y Outliers
-    df_trans['Fecha_Venta'] = pd.to_datetime(df_trans['Fecha_Venta'], dayfirst=True, errors='coerce')
-    
-    # Convertimos a numérico y gestionamos el outlier '999' detectado en el CSV maestro
-    df_trans['Tiempo_Entrega'] = pd.to_numeric(df_trans['Tiempo_Entrega'], errors='coerce')
-    df_trans.loc[df_trans['Tiempo_Entrega'] > 100, 'Tiempo_Entrega'] = np.nan 
-
-    df_trans['Precio_Venta_Final'] = pd.to_numeric(df_trans['Precio_Venta_Final'], errors='coerce').fillna(0)
-    df_trans['Costo_Envio'] = pd.to_numeric(df_trans['Costo_Envio'], errors='coerce').fillna(0)
 
     # Métricas de salud
     salud_antes = (100, 0, 0)
@@ -56,5 +183,5 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
         "health_score_despues": salud_despues[0],
         "total_transacciones": len(df_trans)
     }
-
+  
     return df_trans, metricas
