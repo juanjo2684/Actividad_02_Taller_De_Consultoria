@@ -52,6 +52,8 @@ def mostrar_crisis_logistica(df_filtrado):
     # 3. Identificación de la Zona Crítica
     # ---------------------------------------------------------
     st.subheader("📍 Mapa de Calor: ¿En qué ruta física fallamos?")
+
+    print(df_geo.columns)
     
     df_rutas = df_geo.groupby(["Bodega_Origen", "Ciudad_Destino"]).agg({
         "NPS_Numerico": "mean",
