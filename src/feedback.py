@@ -88,7 +88,20 @@ def procesar_feedback(ruta_csv):
         "edades_corregidas": edades_corregidas,
         "ratings_corregidos": ratings_corregidos
     }
-
+    cols_texto = df_feedback.select_dtypes(include=['object', 'string']).columns
+     
+    for col in cols_texto:
+        # A. Convertir a minúsculas
+        df_feedback[col] = df_feedback[col].str.lower()
+        
+        # B. Eliminar tildes (Normalización Unicode)
+        # Explicación técnica: 
+        # 'NFKD' separa la letra de la tilde (á -> a + ´). 
+        # 'encode' elimina los caracteres no ASCII (la tilde suelta).
+        # 'decode' devuelve el texto a string legible.
+        df_feedback[col] = df_feedback[col].str.normalize('NFKD')\
+                         .str.encode('ascii', errors='ignore')\
+                         .str.decode('utf-8')
     return df_feedback, metricas
 
 def calcular_health_score(df):
@@ -99,4 +112,5 @@ def calcular_health_score(df):
     duplicados = df.duplicated().sum()
     porcentaje_duplicados = duplicados / len(df) if len(df) > 0 else 0
     score = 100 * (1 - (0.7 * porcentaje_nulos + 0.3 * porcentaje_duplicados))
+
     return round(score, 2), round(porcentaje_nulos * 100, 2), round(porcentaje_duplicados * 100, 2)
