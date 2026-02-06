@@ -8,6 +8,7 @@ from src.ui.sidebar import render_sidebar_filters, render_sidebar_export
 from src.ui.header import render_header
 from src.ui.tabs import render_tabs
 from src.ui.reporting import render_report_section
+from src.ui.chat import render_chat_section
 
 
 # =============================================================================
@@ -55,6 +56,12 @@ render_tabs(df_filtrado, health_scores, metricas_calidad)
 # 6. Generación de Reporte PDF (FIX DEFINITIVO STREAMLIT STATE)
 # =============================================================================
 render_report_section(df_filtrado, health_scores, metricas_calidad)
+
+
+# =============================================================================
+# 7. Asistente IA (Groq)
+# =============================================================================
+render_chat_section(df_filtrado, health_scores)
 
 
 # =============================================================================
