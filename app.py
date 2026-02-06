@@ -41,6 +41,7 @@ except Exception as e:
 # 3. Sidebar – Filtros globales y exportación
 # =============================================================================
 df_filtrado = render_sidebar_filters(df_dss)
+df_filtrado.rename(columns={"Bodega_Origen_x":"Bodega_Origen"}, inplace=True)
 render_sidebar_export(df_filtrado)
 
 
