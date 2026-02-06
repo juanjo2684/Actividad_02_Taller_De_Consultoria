@@ -121,8 +121,10 @@ def mostrar_venta_invisible(df_filtrado: pd.DataFrame, renderizar: bool = True):
             st.metric(
                 "💰 Ingreso en Riesgo (USD)",
                 f"${ingreso_riesgo:,.2f}",
-                delta=f"{pct_ingreso_riesgo:.1f}% del Total",
-                delta_color="inverse"
+            )
+            st.markdown(
+                f"<div class='kpi-percentage'>{pct_ingreso_riesgo:.1f}% del Total</div>",
+                unsafe_allow_html=True,
             )
         with col2:
             st.metric("🆔 SKUs No Catalogados", f"{skus_huerfanos}")

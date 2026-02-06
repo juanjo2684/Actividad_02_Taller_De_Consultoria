@@ -14,7 +14,7 @@ def mostrar_fuga_capital(df_filtrado):
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("💸 Fuga Total (USD)", f"${abs(total_fuga):,.2f}", delta_color="inverse")
+        st.metric("💸 Fuga Total (USD)", f"${abs(total_fuga):,.2f}")
     with col2:
         st.metric("📦 SKUs en Pérdida", f"{df_perdida['SKU_ID'].nunique()}")
     with col3:
@@ -36,7 +36,7 @@ def mostrar_fuga_capital(df_filtrado):
     fig_risk = px.scatter(
         df_sku_risk, x="ingreso_total", y="margen_real",
         size="size_burbuja", color="margen_real",
-        color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
+        color_continuous_scale="BuPu", color_continuous_midpoint=0,
         hover_name="SKU_ID", title="Matriz de Dispersión: Margen vs. Ingresos por SKU"
     )
     fig_risk.add_hline(y=0, line_dash="dash", line_color="black")
@@ -54,7 +54,7 @@ def mostrar_fuga_capital(df_filtrado):
 
     fig_canal = px.bar(
         df_canal, x=canal_col, y="%_Margen", color="%_Margen",
-        color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
+        color_continuous_scale="BuPu", color_continuous_midpoint=0,
         title="Rendimiento de Margen Promedio (%)", text_auto=".2f"
     )
     st.plotly_chart(fig_canal, use_container_width=True)
@@ -72,7 +72,7 @@ def mostrar_fuga_capital(df_filtrado):
             x=canal_col,
             y="margen_real",
             color="margen_real",
-            color_continuous_scale="Reds",
+            color_continuous_scale="Blues",
             title="Consolidado de Dinero Perdido (USD) por Canal",
             labels={"margen_real": "Fuga Total (USD)", canal_col: "Canal de Venta"},
             text_auto=":,.0f"

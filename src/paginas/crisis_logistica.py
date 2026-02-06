@@ -69,7 +69,7 @@ def mostrar_crisis_logistica(df_filtrado):
             x="Ciudad_Destino", 
             y="Bodega_Origen", 
             z="score_crisis",
-            color_continuous_scale="Reds",
+            color_continuous_scale="Blues",
             title="Intensidad de Crisis por Ruta Geográfica (Incluye NPS 5.0)",
             labels={"score_crisis": "Índice de Crisis"}
         )
@@ -101,7 +101,7 @@ def mostrar_crisis_logistica(df_filtrado):
             x="Correlacion", y="Ciudad", 
             orientation='h',
             color="Correlacion",
-            color_continuous_scale="RdYlGn_r",
+            color_continuous_scale="Blues",
             title="Impacto del Tiempo en el NPS por Ciudad"
         )
         st.plotly_chart(fig_corr, use_container_width=True)

@@ -131,8 +131,9 @@ def inject_global_styles() -> None:
             color: var(--primary);
         }
 
-        /* KPI percentage emphasis */
-        .kpi-percentage {
+        /* KPI percentage emphasis – always neutral blue */
+        .kpi-percentage,
+        .kpi-percentage.risk {
             margin-top: 0.35rem;
             padding: 0.35rem 0.6rem;
             display: inline-block;
@@ -143,9 +144,45 @@ def inject_global_styles() -> None:
             font-size: 1.15rem;
             letter-spacing: 0.2px;
         }
-        .kpi-percentage.risk {
-            background: rgba(231, 76, 60, 0.12);
-            color: #c0392b;
+
+        /* Force all st.metric deltas to neutral blue & hide arrow icons */
+        [data-testid="stMetricDelta"] {
+            color: #2e75b6 !important;
+        }
+        [data-testid="stMetricDelta"] svg {
+            display: none !important;
+        }
+
+        /* Enhanced table / dataframe styling */
+        .stDataFrame table,
+        .stTable table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            font-size: 0.88rem;
+        }
+        .stDataFrame thead th,
+        .stTable thead th {
+            background: #1f4e78 !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 10px 12px !important;
+            border-bottom: 2px solid #163d5c !important;
+        }
+        .stDataFrame tbody td,
+        .stTable tbody td {
+            padding: 8px 12px !important;
+            border-bottom: 1px solid #e9eef5 !important;
+        }
+        .stDataFrame tbody tr:nth-child(even),
+        .stTable tbody tr:nth-child(even) {
+            background: #f6f8fb;
+        }
+        .stDataFrame tbody tr:hover,
+        .stTable tbody tr:hover {
+            background: rgba(0, 161, 214, 0.08);
         }
         </style>
         """,

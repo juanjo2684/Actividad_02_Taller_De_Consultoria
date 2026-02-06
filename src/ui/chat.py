@@ -152,12 +152,10 @@ def _init_chat_state() -> None:
 #  Componente principal del chat
 # =====================================================================
 
-def render_chat_section(df_filtrado: pd.DataFrame, health_scores: dict) -> None:
-    """Renderiza la sección de chat con Groq en la barra lateral + área principal."""
-
+def render_chat_sidebar_config() -> None:
+    """Renderiza solo la configuración del chat en la barra lateral."""
     _init_chat_state()
 
-    # ── Configuración en Sidebar ─────────────────────────────────
     st.sidebar.markdown("---")
     st.sidebar.subheader("🤖 Asistente IA (Groq)")
 
@@ -192,24 +190,48 @@ def render_chat_section(df_filtrado: pd.DataFrame, health_scores: dict) -> None:
         st.session_state.chat_messages = []
         st.rerun()
 
-    # ── Área de chat (solo si hay key) ───────────────────────────
+
+def render_chat_panel(df_filtrado: pd.DataFrame, health_scores: dict) -> None:
+    """Renderiza el panel de chat en el contenedor donde se invoque (lado derecho)."""
+
+    _init_chat_state()
+    api_key = st.session_state.groq_api_key
+
+    st.markdown(
+        """
+        <div style="
+            background: #ffffff;
+            border: 1px solid #e3eaf3;
+            border-radius: 14px;
+            padding: 1.2rem;
+            box-shadow: 0 8px 20px rgba(15,23,42,0.06);
+        ">
+            <h3 style="margin-top:0; color:#1f4e78;">🤖 Asistente IA</h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if not api_key:
+        st.info("🔑 Ingresa tu API Key de Groq en la barra lateral para habilitar el chat.")
         return
 
     # Intentar importar groq
     try:
         from groq import Groq
     except ImportError:
-        st.sidebar.error(
+        st.error(
             "❌ La librería `groq` no está instalada. "
             "Ejecuta: `pip install groq`"
         )
         return
 
-    # Mostrar historial
-    for msg in st.session_state.chat_messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # Contenedor con scroll para el historial
+    chat_container = st.container(height=480)
+    with chat_container:
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
     # Input del usuario
     prompt = st.chat_input(
@@ -218,46 +240,51 @@ def render_chat_section(df_filtrado: pd.DataFrame, health_scores: dict) -> None:
     )
 
     if prompt:
-        # Agregar mensaje del usuario
         st.session_state.chat_messages.append(
             {"role": "user", "content": prompt}
         )
-        with st.chat_message("user"):
-            st.markdown(prompt)
 
-        # Llamar a Groq
-        with st.chat_message("assistant"):
-            with st.spinner("Pensando..."):
-                try:
-                    client = Groq(api_key=api_key)
+        with chat_container:
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
-                    system_prompt = _build_system_prompt(
-                        df_filtrado, health_scores
-                    )
+            with st.chat_message("assistant"):
+                with st.spinner("Pensando..."):
+                    try:
+                        client = Groq(api_key=api_key)
 
-                    messages = [{"role": "system", "content": system_prompt}]
-                    # Incluir últimos 20 mensajes de contexto
-                    messages.extend(
-                        st.session_state.chat_messages[-20:]
-                    )
+                        system_prompt = _build_system_prompt(
+                            df_filtrado, health_scores
+                        )
 
-                    response = client.chat.completions.create(
-                        model=st.session_state.groq_model,
-                        messages=messages,
-                        temperature=0.3,
-                        max_tokens=2048,
-                    )
+                        messages = [{"role": "system", "content": system_prompt}]
+                        messages.extend(
+                            st.session_state.chat_messages[-20:]
+                        )
 
-                    reply = response.choices[0].message.content
-                    st.markdown(reply)
+                        response = client.chat.completions.create(
+                            model=st.session_state.groq_model,
+                            messages=messages,
+                            temperature=0.3,
+                            max_tokens=2048,
+                        )
 
-                    st.session_state.chat_messages.append(
-                        {"role": "assistant", "content": reply}
-                    )
+                        reply = response.choices[0].message.content
+                        st.markdown(reply)
 
-                except Exception as e:
-                    error_msg = f"❌ Error al comunicarse con Groq: {e}"
-                    st.error(error_msg)
-                    st.session_state.chat_messages.append(
-                        {"role": "assistant", "content": error_msg}
-                    )
+                        st.session_state.chat_messages.append(
+                            {"role": "assistant", "content": reply}
+                        )
+
+                    except Exception as e:
+                        error_msg = f"❌ Error al comunicarse con Groq: {e}"
+                        st.error(error_msg)
+                        st.session_state.chat_messages.append(
+                            {"role": "assistant", "content": error_msg}
+                        )
+
+
+def render_chat_section(df_filtrado: pd.DataFrame, health_scores: dict) -> None:
+    """Compatibilidad: renderiza sidebar config + panel de chat a la derecha."""
+    render_chat_sidebar_config()
+    render_chat_panel(df_filtrado, health_scores)

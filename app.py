@@ -2,13 +2,13 @@
 
 import streamlit as st
 
-from src.data_loader import cargar_datos
+from src.data_loader import cargar_datos, render_file_upload_section
 from src.ui.theme import configure_page, apply_plotly_theme, inject_global_styles
 from src.ui.sidebar import render_sidebar_filters, render_sidebar_export
 from src.ui.header import render_header
 from src.ui.tabs import render_tabs
 from src.ui.reporting import render_report_section
-from src.ui.chat import render_chat_section
+from src.ui.chat import render_chat_sidebar_config, render_chat_panel
 
 
 # =============================================================================
@@ -24,10 +24,14 @@ inject_global_styles()
 
 
 # =============================================================================
-# 2. Carga de datos centralizada
+# 2. Carga de archivos (upload con defaults)
 # =============================================================================
+ruta_inv, ruta_feed, ruta_trans = render_file_upload_section()
+
 try:
-    df_dss, health_scores, metricas_calidad = cargar_datos()
+    df_dss, health_scores, metricas_calidad = cargar_datos(
+        ruta_inv, ruta_feed, ruta_trans
+    )
 except Exception as e:
     st.error(f"❌ Error al cargar los datos: {e}")
     st.stop()
@@ -41,27 +45,26 @@ render_sidebar_export(df_filtrado)
 
 
 # =============================================================================
-# 4. Encabezado principal
+# 4. Sidebar – Configuración del chat IA
 # =============================================================================
-render_header(df_filtrado, health_scores)
-
-
-# =============================================================================
-# 5. Navegación por pestañas
-# =============================================================================
-render_tabs(df_filtrado, health_scores, metricas_calidad)
-
-
-# =============================================================================
-# 6. Generación de Reporte PDF (FIX DEFINITIVO STREAMLIT STATE)
-# =============================================================================
+render_chat_sidebar_config()
 render_report_section(df_filtrado, health_scores, metricas_calidad)
 
 
 # =============================================================================
-# 7. Asistente IA (Groq)
+# 5. Layout principal: contenido (izq) + chat (der)
 # =============================================================================
-render_chat_section(df_filtrado, health_scores)
+col_main, col_chat = st.columns([3, 1])
+
+with col_main:
+    # ── Encabezado principal
+    render_header(df_filtrado, health_scores)
+
+    # ── Navegación por pestañas
+    render_tabs(df_filtrado, health_scores, metricas_calidad)
+
+with col_chat:
+    render_chat_panel(df_filtrado, health_scores)
 
 
 # =============================================================================

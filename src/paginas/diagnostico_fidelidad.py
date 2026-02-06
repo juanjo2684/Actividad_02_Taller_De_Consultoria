@@ -44,7 +44,7 @@ def mostrar_diagnostico_fidelidad(df_filtrado):
         size="Stock_Actual",
         color="NPS_Numerico",
         hover_name="Categoria",
-        color_continuous_scale="RdYlGn",
+        color_continuous_scale="BuPu",
         range_color=[0, 10],
         labels={"Rating_Producto": "Calidad (Rating)", "Precio_Venta_Final": "Precio Promedio (USD)", "NPS_Numerico": "NPS Avg"},
         title="Cuadrantes: Precio vs Calidad (Tamaño = Stock disponible)"
@@ -91,7 +91,7 @@ def mostrar_diagnostico_fidelidad(df_filtrado):
 
     fig_nps = px.histogram(df_filtrado, x="NPS_Categoria", color="NPS_Categoria",
                           category_orders={"NPS_Categoria": ["Promotor", "Pasivo", "Detractor"]},
-                          color_discrete_map={"Promotor": "#2ecc71", "Pasivo": "#f1c40f", "Detractor": "#e74c3c"},
+                          color_discrete_map={"Promotor": "#1f4e78", "Pasivo": "#93bedf", "Detractor": "#00a1d6"},
                           title="Volumen Real de Clientes por Categoría (Incluye NPS 5.0)")
     
     st.plotly_chart(fig_nps, use_container_width=True)

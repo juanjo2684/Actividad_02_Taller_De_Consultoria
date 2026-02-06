@@ -31,7 +31,7 @@ def mostrar_resumen_ejecutivo(df_filtrado, health_scores, metricas_calidad):
         pct_riesgo = (ventas_sin_inventario / len(df_filtrado) * 100) if len(df_filtrado) > 0 else 0
         st.metric("👻 Ventas Sin Inventario", f"{ventas_sin_inventario:,}")
         st.markdown(
-            f"<div class='kpi-percentage risk'>{pct_riesgo:.1f}% Riesgo</div>",
+            f"<div class='kpi-percentage'>{pct_riesgo:.1f}% Riesgo</div>",
             unsafe_allow_html=True
         )
     
@@ -71,7 +71,7 @@ def mostrar_resumen_ejecutivo(df_filtrado, health_scores, metricas_calidad):
         fig_hs = px.bar(
             df_hs_melted, x="Dataset", y="Score", color="Estado",
             barmode="group", height=300,
-            color_discrete_map={"Antes": "#EF553B", "Despues": "#00CC96"}
+            color_discrete_map={"Antes": "#93bedf", "Despues": "#1f4e78"}
         )
         st.plotly_chart(fig_hs, use_container_width=True)
 
@@ -100,7 +100,7 @@ def mostrar_resumen_ejecutivo(df_filtrado, health_scores, metricas_calidad):
     with col1:
         fig_cat = px.bar(
             top_df, x="Categoria", y="Ingresos", color="Margen %",
-            color_continuous_scale="RdYlGn",
+            color_continuous_scale="BuPu",
             title="Distribución de Ingresos y Rentabilidad",
             hover_data=["Transacciones", "Margen"]
         )

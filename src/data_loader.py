@@ -1,4 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
+import os
+import tempfile
 import pandas as pd
 import streamlit as st
 from src.inventario import procesar_inventario
@@ -7,12 +9,55 @@ from src.feedback import procesar_feedback
 
 pd.set_option('future.no_silent_downcasting', True)
 
+# Rutas por defecto dentro del repositorio
+_DEFAULT_INVENTARIO = "data/inventario_central_v2.csv"
+_DEFAULT_FEEDBACK = "data/feedback_clientes_v2.csv"
+_DEFAULT_TRANSACCIONES = "data/transacciones_logistica_v2.csv"
+
+
+def render_file_upload_section() -> tuple:
+    """Muestra uploaders en el sidebar y devuelve las rutas a utilizar."""
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📂 Archivos de Datos")
+    st.sidebar.caption(
+        "Por defecto se usan los archivos incluidos en el repositorio. "
+        "Puedes cargar tus propios CSV para reemplazarlos."
+    )
+
+    up_inv = st.sidebar.file_uploader(
+        "Inventario CSV", type=["csv"], key="upload_inventario",
+        help="inventario_central_v2.csv",
+    )
+    up_feed = st.sidebar.file_uploader(
+        "Feedback CSV", type=["csv"], key="upload_feedback",
+        help="feedback_clientes_v2.csv",
+    )
+    up_trans = st.sidebar.file_uploader(
+        "Transacciones CSV", type=["csv"], key="upload_transacciones",
+        help="transacciones_logistica_v2.csv",
+    )
+
+    def _resolve(uploaded, default_path: str) -> str:
+        if uploaded is not None:
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".csv")
+            tmp.write(uploaded.getvalue())
+            tmp.close()
+            return tmp.name
+        return default_path
+
+    ruta_inv = _resolve(up_inv, _DEFAULT_INVENTARIO)
+    ruta_feed = _resolve(up_feed, _DEFAULT_FEEDBACK)
+    ruta_trans = _resolve(up_trans, _DEFAULT_TRANSACCIONES)
+
+    return ruta_inv, ruta_feed, ruta_trans
+
+
 @st.cache_data
-def cargar_datos():
+def cargar_datos(ruta_inventario: str, ruta_feedback: str, ruta_transacciones: str):
     # 1. Carga de archivos individuales con sus respectivas métricas de salud
-    df_inv, met_inv = procesar_inventario("data/inventario_central_v2.csv")
-    df_feed, met_feed = procesar_feedback("data/feedback_clientes_v2.csv")
-    df_trans, met_trans = procesar_transacciones("data/transacciones_logistica_v2.csv", df_inv, df_feed)
+    df_inv, met_inv = procesar_inventario(ruta_inventario)
+    df_feed, met_feed = procesar_feedback(ruta_feedback)
+    df_trans, met_trans = procesar_transacciones(ruta_transacciones, df_inv, df_feed)
     
     # 2. Consolidación en un único Dataset Maestro para el DSS
     df_dss = crear_dataset_consolidado(df_trans, df_inv, df_feed)

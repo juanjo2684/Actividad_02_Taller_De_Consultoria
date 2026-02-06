@@ -32,7 +32,11 @@ def mostrar_salud_datos(df, metricas_calidad):
     with col1:
         st.metric("⭐ Health Score Inicial", f"{avg_antes:.1f}%")
     with col2:
-        st.metric("✅ Health Score Final", f"{avg_despues:.1f}%", delta=f"{avg_despues - avg_antes:.1f}%")
+        st.metric("✅ Health Score Final", f"{avg_despues:.1f}%")
+        st.markdown(
+            f"<div class='kpi-percentage'>+{avg_despues - avg_antes:.1f}% mejora</div>",
+            unsafe_allow_html=True,
+        )
     with col3:
         nulos = df.isna().sum().sum()
         st.metric("🕳️ Celdas Vacías", f"{nulos:,}")
@@ -40,7 +44,7 @@ def mostrar_salud_datos(df, metricas_calidad):
     # 3. Gráfico Comparativo
     fig = px.bar(df_hs, x="Módulo", y=["Antes", "Despues"], barmode="group",
                  title="Mejora de Calidad por Módulo",
-                 color_discrete_map={"Antes": "#FF6B6B", "Despues": "#4ECDC4"})
+                 color_discrete_map={"Antes": "#93bedf", "Despues": "#1f4e78"})
     st.plotly_chart(fig, use_container_width=True)
 
     # 4. Detalle por Módulo (Tabs)
