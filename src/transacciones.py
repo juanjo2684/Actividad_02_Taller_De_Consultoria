@@ -20,14 +20,7 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
     # Convertir Fecha_Venta a datetime para análisis temporal
     df_trans['Fecha_Venta'] = pd.to_datetime(df_trans['Fecha_Venta'])
 
-    # ==========================================
-    # PASO 3: NORMALIZACIÓN DE TEXTO
-    # ==========================================
-    # Convertir todas las columnas de texto a minúsculas
-    # Esto facilita comparaciones y evita inconsistencias
-    cols_texto = df_trans.select_dtypes(include=['object', 'string']).columns
-    df_trans[cols_texto] = df_trans[cols_texto].apply(lambda x: x.str.lower())
-
+    
     # ==========================================
     # PASO 4: CONVERSIÓN DE CANTIDAD_VENDIDA A POSITIVO
     # ==========================================
@@ -37,11 +30,12 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
     # ==========================================
     # PASO 5: IMPUTACIÓN CONDICIONAL DE ESTADO_ENVIO
     # ==========================================
+    
     # Estrategia: Usar información de feedback para inferir estado de envío
 
     # Paso 5a: Transacciones SIN ticket de soporte -> "entregado"
     # (clientes sin problemas, no abrieron ticket)
-    transacciones_nps_no = df_feedback[df_feedback['Ticket_Soporte_Abierto'] == 'no']['Transaccion_ID'].unique()
+    transacciones_nps_no = df_feedback[df_feedback['Ticket_Soporte'] == 0]['Transaccion_ID'].unique()
 
     condicion_existe = df_trans['Transaccion_ID'].isin(transacciones_nps_no)
     condicion_vacio = df_trans['Estado_Envio'].isna()
@@ -50,7 +44,7 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
 
     # Paso 5b: Transacciones CON ticket de soporte abierto -> "devuelto"
     # (clientes con problemas, abrieron ticket)
-    transacciones_nps_si = df_feedback[df_feedback['Ticket_Soporte_Abierto'] == 'si']['Transaccion_ID'].unique()
+    transacciones_nps_si = df_feedback[df_feedback['Ticket_Soporte'] == 1]['Transaccion_ID'].unique()
 
     condicion_existe = df_trans['Transaccion_ID'].isin(transacciones_nps_si)
     condicion_vacio = df_trans['Estado_Envio'].isna()
@@ -62,11 +56,11 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
     # ==========================================
     # Mapeo de abreviaturas a nombres completos
     dic_ciudades = {
-        "bog": "bogotá", "bogota": "bogotá",
-        "med": "medellín", "medellin": "medellín",
-        "baq": "barranquilla", "barranquilla": "barranquilla",
-        "ventas_web": "canal digital" 
-    }
+            "BOG": "Bogotá", "BOGOTA": "Bogotá",
+            "MED": "Medellín", "MEDELLIN": "Medellín",
+            "BAQ": "Barranquilla", "BARRANQUILLA": "Barranquilla",
+            "VENTAS_WEB": "Canal digital"
+        }
     df_trans['Ciudad_Destino'].replace(dic_ciudades, inplace=True)
 
     # ==========================================
@@ -186,8 +180,16 @@ def procesar_transacciones(ruta_csv, df_inventario, df_feedback):
         "health_score_antes": salud_antes[0],
         "health_score_despues": salud_despues[0],
         "total_transacciones": len(df_trans),
-        # "tiempos_outliers": tiempos_outliers,
         "skus_sin_inventario": skus_sin_inventario
     }
+    
+    
   
+
     return df_trans, metricas
+
+
+
+
+
+

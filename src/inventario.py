@@ -164,5 +164,9 @@ def procesar_inventario(inventario_path: str) -> tuple:
         "valor_inventario_total": f"${(df_inventario['Stock_Actual'] * df_inventario['Costo_Unitario_USD']).sum():,.2f}",
         "rango_costos_final": f"${df_inventario['Costo_Unitario_USD'].min():.2f} - ${df_inventario['Costo_Unitario_USD'].max():.2f}"
     }
-    
+
+      
+
     return df_inventario, metricas
+
+

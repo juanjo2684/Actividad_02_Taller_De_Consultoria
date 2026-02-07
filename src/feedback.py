@@ -88,7 +88,7 @@ def procesar_feedback(ruta_csv):
         "edades_corregidas": edades_corregidas,
         "ratings_corregidos": ratings_corregidos
     }
-
+    
     return df_feedback, metricas
 
 def calcular_health_score(df):
@@ -99,4 +99,8 @@ def calcular_health_score(df):
     duplicados = df.duplicated().sum()
     porcentaje_duplicados = duplicados / len(df) if len(df) > 0 else 0
     score = 100 * (1 - (0.7 * porcentaje_nulos + 0.3 * porcentaje_duplicados))
+
     return round(score, 2), round(porcentaje_nulos * 100, 2), round(porcentaje_duplicados * 100, 2)
+
+
+
